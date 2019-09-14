@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <div id="svg-div">
+
+        </div>
+        <script src="myscript.js"></script>
+
+    <script>
+        var config={};
+        let a = new Rating(svg_div, config),
+        T = 1, startTime = ((new Date()).getTime() * 1), time = 0,colors = ['#ff0', '#f00', '#0f0', '#000'];
+        while(time < 100){
+            config.svg_width=400+ ((T * 100) % 400);
+            config.svg_height=400+ ((T * 100) % 400);
+            config.rating_value=(4.5 + T +1) %((5+T)% 10 + 1);
+            config.noOfStars=(5 + T) % 10 + 1;
+            config.fill_rated=colors[T%4];
+            a.update();
+            time =  ((new Date()).getTime() * 1) - startTime;
+            T++;
+        }
+        console.log(T + ' tests in ' + time + 'ms');
+    </script>
+    </body>
+</html>
