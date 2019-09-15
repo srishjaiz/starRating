@@ -87,11 +87,16 @@ class Rating{
         if (result) {
             this.isRAF=true;
             window.requestAnimationFrame(() => {
+                if(typeof this.onPreDraw === 'function'){
+                    this.onPreDraw();
+                }
+                else if(typeof this.onPreDraw !== 'undefined' && typeof this.onPreDraw !== 'function'){
+                    console.error("onPreDraw not a function");
+                }
                 this._draw(result);
             });
         } 
         else {
-            this._elements.el.removeChild(this._elements.svg);
             console.error("\nStopping execution");
         }
     }
@@ -105,13 +110,18 @@ class Rating{
         if (result) {
             if(!this.isRAF){
                 window.requestAnimationFrame(() => {
+                    if(typeof this.onPreDraw === 'function'){
+                        this.onPreDraw();
+                    }
+                    else if(typeof this.onPreDraw !== 'undefined' && typeof this.onPreDraw !== 'function'){
+                        console.error("onPreDraw not a function");
+                    }
                     this._draw(result);
                 });
                 this.isRAF = true;
             }
         }
         else {
-            //this._elements.el.removeChild(this._elements.svg);
             console.error("\nStopping execution");
         }
         if(typeof this.onUpdate === 'function'){
@@ -120,6 +130,16 @@ class Rating{
         else if(typeof this.onUpdate !== 'undefined' && typeof this.onUpdate !== 'function'){
             console.error("onUpdate not a function");
         }
+    }
+    _setAttribute(){
+        if(this.args.svg_height==="undefined"){
+            ele.setAttribute("",this._config.svg_height);
+        }
+        else if(this._config.svg_height!==this.args.svg_height){
+            this._config.svg_height=this.args.svg_height;
+            ele.setAttribute("",this._config.svg_height);            
+        }
+
     }
     _draw(result){
         this.isRAF=false;
@@ -141,7 +161,7 @@ class Rating{
         var res = this.args.rating_value.split(".");
 
         if(res.length>1){
-            this._putLinerGradient(res[1],result[1]);
+            this._putLinerGradient(res[1],result[1],result[2]);
         }
         var box=result[0];
         var currentStars= this._elements.stars.length;
@@ -155,84 +175,105 @@ class Rating{
             let star=this._elements.stars.pop();
             this._elements.svg.removeChild(star);
         }
-        if(this.args.orientation=="LR"){
-            for(let i=0;i<this._elements.stars.length;i++,res[0]--){
+       
+        var direction=result[1];
+        var flow=result[2];
+        var unrated;
+        if(direction=="row"){
+            if(flow=="reverse"){
+                unrated=this.args.noOfStars-res[0]-1;
+            }
+            for(let i=0;i<this._elements.stars.length;i++){
                 var start=((box +(2*i)*box + (this.args.svg_width - box*this.args.noOfStars)+ this.args.star_strokewidth +this.args.padding) / 2) + " " + ((this.args.svg_height - box +this.args.star_strokewidth +this.args.padding) / 2);
-                if(res[0]>0){
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                if((flow=="" && res[0]>0) || (flow=="reverse" && unrated>0)){
+                    if(flow==""){
+                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    }
+                    else{
+                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    }
                 }
-                else if(res[0]==0 && typeof res[1] !== "undefined"){
-                    let rating_frac=
-                    {   
-                        fill:"url(#rated)",
-                        stroke:"url(#rated_stroke)"
-                    };
+                else if((flow=="" && res[0]==0) || (flow=="reverse" && unrated==0) && typeof res[1] !== "undefined"){
+                    if(flow==""){
+                        var rating_frac=
+                        {   
+                            fill:"url(#rated)",
+                            stroke:"url(#rated_stroke)"
+                        };
+                    }
+                    else{
+                        var rating_frac=
+                        {   
+                            fill:"url(#rated_RL)",
+                            stroke:"url(#rated_stroke_RL)"
+                        };
+                    }
                     createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding,rating_frac);               
                 }
-                else{
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                else if((flow=="" && res[0]<0) || (flow=="reverse" && unrated<0)){
+                    if(flow==""){
+                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    }
+                    else{
+                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    }
                 }
-            }
-        }
-        else if(this.args.orientation=="RL"){
-            let unrated=this.args.noOfStars-res[0]-1;
-            for(let i=0;i<this._elements.stars.length;i++,unrated--){
-                var start=((box +(2*i)*box + (this.args.svg_width - box*this.args.noOfStars)+ this.args.star_strokewidth +this.args.padding) / 2) + " " + ((this.args.svg_height - box +this.args.star_strokewidth +this.args.padding) / 2);
-                if(unrated>0){
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
-                }
-                else if(unrated==0 && typeof res[1] !== "undefined"){
-                    let rating_frac=
-                    {   
-                        fill:"url(#rated_RL)",
-                        stroke:"url(#rated_stroke_RL)"
-                    };
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding,rating_frac);               
+                if(flow==""){
+                    res[0]--;
                 }
                 else{
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
-                }
-            }
-        }
-        else if(this.args.orientation=="TB"){
-            for(let i=0;i<this._elements.stars.length;i++,res[0]--){
-                var start=((box + (this.args.svg_width - box)+ this.args.star_strokewidth) / 2) + " " + (((2*i)*box +this.args.svg_height - box*this.args.noOfStars +this.args.star_strokewidth) / 2);
-                if(res[0]>0){
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
-                }
-                else if(res[0]==0 && typeof res[1] != "undefined"){
-                    let rating_frac=
-                    {   
-                        fill:"url(#rated_TB)",
-                        stroke:"url(#rated_stroke_TB)"
-                    };
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding,rating_frac);
-                }
-                else{
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    unrated--;
                 }
             }
         }
         else{
-            let unrated=this.args.noOfStars-res[0]-1;
-            for(let i=0;i<this._elements.stars.length;i++,unrated--){
+            if(flow=="reverse"){
+                unrated=this.args.noOfStars-res[0]-1;
+            }
+            for(let i=0;i<this._elements.stars.length;i++){
                 var start=((box + (this.args.svg_width - box)+ this.args.star_strokewidth) / 2) + " " + (((2*i)*box +this.args.svg_height - box*this.args.noOfStars +this.args.star_strokewidth) / 2);
-                if(unrated>0){
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                if((flow=="" && res[0]>0) || (flow=="reverse" && unrated>0)){
+                    if(flow==""){
+                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    }
+                    else{
+                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    }
                 }
-                else if(unrated==0 && typeof res[1] != "undefined"){
-                    let rating_frac=
-                    {   
-                        fill:"url(#rated_BT)",
-                        stroke:"url(#rated_stroke_BT)"
-                    };
+                else if((flow=="" && res[0]==0) || (flow=="reverse" && unrated==0) && typeof res[1] !== "undefined"){
+                    if(flow==""){
+                        var rating_frac=
+                        {   
+                            fill:"url(#rated_TB)",
+                            stroke:"url(#rated_stroke_TB)"
+                        };
+                    }
+                    else{
+                        var rating_frac=
+                        {   
+                            fill:"url(#rated_BT)",
+                            stroke:"url(#rated_stroke_BT)"
+                        };
+                    }
                     createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding,rating_frac);
                 }
+                else if((flow=="" && res[0]<0) || (flow=="reverse" && unrated<0)){
+                    if(flow==""){
+                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    }
+                    else{
+                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    }
+                }
+                if(flow==""){
+                    res[0]--;
+                }
                 else{
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                    unrated--;
                 }
             }
         }
+
         if(typeof this.onDraw === 'function'){
             this.onDraw();
         }
@@ -243,14 +284,9 @@ class Rating{
     }
 
 
-    _putLinerGradient(frac,direction){
+    _putLinerGradient(frac,direction,flow){
         //debugger;
-        if(direction==="row"){
-            var dir= [100,0];
-        }
-        else{
-            var dir= [0,100];
-        }
+        
         if(frac.length==1){
             frac=frac+"0";
            // console.log(frac);
@@ -262,6 +298,15 @@ class Rating{
             let res2= frac.split(".");
             frac=res2[1];
             // console.log(frac);
+        }
+        if(direction==="row"){
+            var dir= [100,0];
+        }
+        else{
+            var dir= [0,100];
+        }
+        if(flow==="reverse"){
+            frac=100-frac;
         }
         
         setLinearGrad(this._elements.def.linearGrad_LR,this._elements.def.stop_rated_LR,this._elements.def.stop_unrated_LR,"rated",frac,this.args.fill_rated,this.args.fill_unrated,dir);
@@ -276,7 +321,7 @@ class Rating{
     
     _validate(){
         var setUserAttributes=true;
-        var direction,box;
+        var direction,flow,box;
         if(typeof this.args.orientation!== "undefined"){
             if(!(this.args.orientation==="LR" || this.args.orientation==="RL" || this.args.orientation==="TB" || this.args.orientation==="BT")){
                 this.args.orientation=this._config.orientation;
@@ -286,10 +331,12 @@ class Rating{
         else{
             this.args.orientation=this._config.orientation;
         }
-        
+        // !this.args.svg_height || 
+        // !this.args.svg_width ||
+        // !this.args.noOfStars ||
         if( typeof this.args.svg_height !== "undefined"){
-            this.args.svg_height=Number(this.args.svg_height);
-            if(!this.args.svg_height || this.args.svg_height<10){
+            this.args.svg_height=+this.args.svg_height;
+            if(this.args.svg_height<10){
                 this.args.svg_height=this._config.svg_height;
                 console.warn("invalid svg height, setting it to prev config");
             }
@@ -299,8 +346,8 @@ class Rating{
         }
 
         if(typeof this.args.svg_width !== "undefined"){
-            this.args.svg_width=Number(this.args.svg_width);
-            if(!this.args.svg_width || this.args.svg_width<10){
+            this.args.svg_width=+this.args.svg_width;
+            if(this.args.svg_width<10){
                 this.args.svg_width=this._config.svg_width;
                 console.warn("invalid svg width, setting it to prev config");
             }
@@ -310,8 +357,8 @@ class Rating{
         }
 
         if(typeof this.args.noOfStars!== "undefined"){
-            this.args.noOfStars=Number(this.args.noOfStars); 
-            if(!this.args.noOfStars || isFloat(this.args.noOfStars || this.args.noOfStars<0)){
+            this.args.noOfStars=+this.args.noOfStars; 
+            if( isFloat(this.args.noOfStars) || this.args.noOfStars<0){
                 this.args.noOfStars=this._config.noOfStars;
                 console.warn("invalid No Of Stars, setting it to prev config");
             }
@@ -321,7 +368,7 @@ class Rating{
         }
 
         if(typeof this.args.stroke_rated!== "undefined"){
-            this.args.stroke_rated=String(this.args.stroke_rated);
+            this.args.stroke_rated=""+(this.args.stroke_rated);
             if(startsWithHash(this.args.stroke_rated) && !checkHex(this.args.stroke_rated)){
                 this.args.stroke_rated=this._config.stroke_rated;
                 console.warn("invalid stroke rated, setting it to prev config");
@@ -332,7 +379,7 @@ class Rating{
         }
 
         if(typeof this.args.stroke_unrated!== "undefined"){
-            this.args.stroke_unrated=String(this.args.stroke_unrated);
+            this.args.stroke_unrated=""+(this.args.stroke_unrated);
             if(startsWithHash(this.args.stroke_unrated) && !checkHex(this.args.stroke_unrated)){
                 this.args.stroke_unrated=this._config.stroke_unrated;
                 console.warn("invalid stroke unrated, setting it to prev config");
@@ -343,7 +390,7 @@ class Rating{
         }
 
         if(typeof this.args.fill_rated!== "undefined"){
-            this.args.fill_rated=String(this.args.fill_rated);
+            this.args.fill_rated=""+(this.args.fill_rated);
             if(startsWithHash(this.args.fill_rated) && !checkHex(this.args.fill_rated)){
                 this.args.fill_rated=this._config.fill_rated;
                 console.warn("invalid fill rated, setting it to prev config");
@@ -354,7 +401,7 @@ class Rating{
         }
 
         if(typeof this.args.fill_unrated!== "undefined"){
-            this.args.fill_unrated=String(this.args.fill_unrated);
+            this.args.fill_unrated=""+(this.args.fill_unrated);
             if(startsWithHash(this.args.fill_unrated) && !checkHex(this.args.fill_unrated)){
                 this.args.fill_unrated=this._config.fill_unrated;
                 console.warn("invalid fill unrated, setting it to prev config");
@@ -383,9 +430,31 @@ class Rating{
         else{
             this.args.align_items=this._config.align_items;
         }
-        
+
+        if(typeof this.args.padding!== "undefined"){
+            this.args.padding=+this.args.padding; //box checking is req
+            if((!this.args.padding && this.args.padding!==0) || this.args.padding<0){ 
+                this.args.padding=this._config.padding;
+                console.warn("invalid padding, setting it to prev config");
+            }
+        }
+        else{
+            this.args.padding=this._config.padding;
+        }
+
+        if(typeof this.args.star_strokewidth!== "undefined"){
+            this.args.star_strokewidth=+this.args.star_strokewidth;//box checking is req
+            if((!this.args.star_strokewidth && this.args.star_strokewidth!==0) || this.args.star_strokewidth<0){
+                this.args.star_strokewidth=this._config.star_strokewidth;
+                console.warn("invalid strokewidth, setting it to prev config");
+            }
+        }
+        else{
+            this.args.star_strokewidth=this._config.star_strokewidth;
+        }
+
         if(typeof this.args.rating_value!== "undefined"){ 
-            this.args.rating_value=Number(this.args.rating_value); 
+            this.args.rating_value=+this.args.rating_value; 
             if((!this.args.rating_value && this.args.rating_value!==0) || this.args.rating_value<0){
                 if(this._config.rating_value>this.args.noOfStars){
                     this.args.rating_value=this.args.noOfStars;
@@ -405,34 +474,22 @@ class Rating{
             this.args.rating_value=this._config.rating_value;
         }
 
-        if(typeof this.args.padding!== "undefined"){
-            this.args.padding=Number(this.args.padding); //box checking is left
-            if((!this.args.padding && this.args.padding!==0) || this.args.padding<0){ 
-                this.args.padding=this._config.padding;
-                console.warn("invalid padding, setting it to prev config");
-            }
-        }
-        else{
-            this.args.padding=this._config.padding;
-        }
-
-        if(typeof this.args.star_strokewidth!== "undefined"){
-            this.args.star_strokewidth=Number(this.args.star_strokewidth);//box checking is left
-            if((!this.args.star_strokewidth && this.args.star_strokewidth!==0) || this.args.star_strokewidth<0){
-                this.args.star_strokewidth=this._config.star_strokewidth;
-                console.warn("invalid strokewidth, setting it to prev config");
-            }
-        }
-        else{
-            this.args.star_strokewidth=this._config.star_strokewidth;
-        }
-
         //calculaing box size        
+
+
+
         if(this.args.orientation==="LR" || this.args.orientation==="RL"){
             direction="row";
         }
         else{
             direction="col";
+        }
+
+        if(this.args.orientation==="RL" || this.args.orientation==="BT"){
+            flow="reverse";
+        }
+        else{
+            flow="";
         }
 
         if(direction==="row"){
@@ -467,7 +524,7 @@ class Rating{
         }
 
         if(setUserAttributes){
-            return [box,direction];
+            return [box,direction,flow];
         }
         else{
             return null;

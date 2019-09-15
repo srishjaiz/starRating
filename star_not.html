@@ -4,23 +4,57 @@
         <div id="svg-div">
 
         </div>
-        <script src="rating.js"></script>
+        <script src="myscript.js"></script>
 
     <script>
-        var config={};
-        let a = new Rating(svg_div, config),
-        T = 1, startTime = ((new Date()).getTime() * 1), time = 0,colors = ['#ff0', '#f00', '#0f0', '#000'];
-        while(time < 100){
-            config.svg_width=400+ ((T * 100) % 400);
-            config.svg_height=400+ ((T * 100) % 400);
-            config.rating_value=(4.5 + T +1) %((5+T)% 10 + 1);
-            config.noOfStars=(5 + T) % 10 + 1;
-            config.fill_rated=colors[T%4];
-            a.update();
-            time =  ((new Date()).getTime() * 1) - startTime;
-            T++;
-        }
-        console.log(T + ' tests in ' + time + 'ms');
+        var config={
+            rating_value:3.7,
+            orientation:"TB"
+        };
+        let a = new Rating(svg_div, config);
+
+        var bound= a.update.bind(a);
+        setTimeout(()=>{
+            config.orientation="BT";
+            bound();
+        },2000);
+
+        //story: parentNode in HTML
+
+        // let T = 1, startTime = ((new Date()).getTime() * 1), time = 0,colors = ['#ff0', '#f00', '#0f0', '#000'];
+        // while(time < 100){
+        //     config.svg_width=400+ ((T * 100) % 400);
+        //     config.svg_height=400+ ((T * 100) % 400);
+        //     config.rating_value=(((4.5 + T) % 10) + 1) % (((5 + T) % 10) + 1);
+        //     config.noOfStars=(5 + T) % 10 + 1;
+        //     config.fill_rated=colors[T%4];
+        //     a.update();
+        //     time =  ((new Date()).getTime() * 1) - startTime;
+        //     T++;
+        // }
+        // console.log(T + ' tests in ' + time + 'ms');
+
+        //story: HTML element
+
+        // let startTime, time = 0, colors = ['#ff0', '#f00', '#0f0', '#000'], calledDraw = 0;
+        // a.onPreDraw = function () {
+        //     startTime = ((new Date()).getTime() * 1);
+        // }
+        // a.onDraw = function () {
+        //     calledDraw++;
+        //     time += ((new Date()).getTime() * 1) - startTime;
+        //     if (calledDraw < 100) {
+        //         config.svg_width=400+ ((calledDraw * 100) % 400);
+        //         config.svg_height=400+ ((calledDraw * 100) % 400);
+        //         config.rating_value=(((4.5 + calledDraw) % 10) + 1) % (((5 + calledDraw) % 10) + 1);
+        //         config.noOfStars=(5 + calledDraw) % 10 + 1;
+        //         config.fill_rated=colors[calledDraw%4];
+        //         a.update();
+        //     } 
+        //     else {
+        //         console.log('Draw done ' + calledDraw + 'time(s) in ' + time + 'ms')
+        //     }
+        // }
     </script>
     </body>
 </html>
