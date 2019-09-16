@@ -1,4 +1,16 @@
 var svg_div= document.getElementById("svg-div");
+var c=0;
+
+class Path{
+    constructor(){
+        this.elem='';
+        this.fill=undefined;
+        this.stroke=undefined;
+        this.strokeWidth=undefined;
+        this.strokeLinejoin=undefined;
+        this.d='';
+    }
+}
 class Rating{
     constructor(el,args){
         
@@ -10,6 +22,7 @@ class Rating{
         this._elements.el=el;
         this._elements.svg=document.createElementNS("http://www.w3.org/2000/svg", "svg");
         this._elements.stars=[];
+
         this._elements.def={};
 
         this._elements.def.elem = document.createElementNS("http://www.w3.org/2000/svg", "defs");
@@ -79,7 +92,7 @@ class Rating{
 
 
         //internal variable
-        this.creation=true;
+        this._creation=true;
         this._elements.el.appendChild(this._elements.svg);
         this._elements.svg.appendChild(this._elements.def.elem);
 
@@ -131,66 +144,68 @@ class Rating{
             console.error("onUpdate not a function");
         }
     }
-    _setAttribute(){
-        if(this.args.svg_height==="undefined"){
-            ele.setAttribute("",this._config.svg_height);
+    _setAttribute(ele,attr,userProp,prevProp){
+        if(typeof userProp==="undefined"){
+            ele.setAttribute(attr,prevProp);
         }
-        else if(this._config.svg_height!==this.args.svg_height){
-            this._config.svg_height=this.args.svg_height;
-            ele.setAttribute("",this._config.svg_height);            
+        else if(prevProp!==userProp){
+            prevProp=userProp;
+            ele.setAttribute(attr,prevProp);            
         }
-
+        return prevProp;
     }
     _draw(result){
         this.isRAF=false;
-        if(this.creation){
-            this._elements.svg.setAttribute("width",this.args.svg_width);
-            this._elements.svg.setAttribute("height",this.args.svg_height);
-            this.creation=false;
+        if(this._creation){
+            let svg_height=this.args.svg_height?this.args.svg_height:this._config.svg_height;
+            let svg_width=this.args.svg_width?this.args.svg_width:this._config.svg_width;
+            this._elements.svg.setAttribute("width",svg_width);
+            this._elements.svg.setAttribute("height",svg_height);
+            this._creation=false;
         }
-        else{
-            if(this._config.svg_height!==this.args.svg_height){
-                this._elements.svg.setAttribute("height",this.args.svg_height);
-            }
-            if(this._config.svg_width!==this.args.svg_width){
-                this._elements.svg.setAttribute("width",this.args.svg_width);
-            }
-        }
+        this._config.svg_width=this._setAttribute(this._elements.svg,"width",this.args.svg_width,this._config.svg_width);
+        this._config.svg_height=this._setAttribute(this._elements.svg,"height",this.args.svg_height,this._config.svg_height);
 
-        this.args.rating_value=String(this.args.rating_value);
-        var res = this.args.rating_value.split(".");
+        var noOfStars=this.args.noOfStars?this.args.noOfStars:this._config.noOfStars;
+        var star_strokewidth=this.args.star_strokewidth?this.args.star_strokewidth:this._config.star_strokewidth;
+        var padding=this.args.padding?this.args.padding:this._config.padding;
+        var rating_value=""+(this.args.rating_value?this.args.rating_value:this._config.rating_value);
 
+        var res = rating_value.split(".");
+        //updating linear gradient
         if(res.length>1){
             this._putLinerGradient(res[1],result[1],result[2]);
         }
+
         var box=result[0];
         var currentStars= this._elements.stars.length;
              
-        for(let i=currentStars;i<this.args.noOfStars;i++){
-            let star = document.createElementNS("http://www.w3.org/2000/svg", 'path');
-            this._elements.stars.push(star);
-            this._elements.svg.appendChild(star);
+        for(let i=currentStars;i<noOfStars;i++){
+            let path=new Path();
+            path.elem = document.createElementNS("http://www.w3.org/2000/svg", 'path');
+            this._elements.stars.push(path);
+            this._elements.svg.appendChild(path.elem);
         }
-        for(let i=currentStars;i>this.args.noOfStars;i--){
+        for(let i=currentStars;i>noOfStars;i--){
             let star=this._elements.stars.pop();
-            this._elements.svg.removeChild(star);
+            this._elements.svg.removeChild(star.elem);
         }
-       
         var direction=result[1];
         var flow=result[2];
         var unrated;
         if(direction=="row"){
             if(flow=="reverse"){
-                unrated=this.args.noOfStars-res[0]-1;
+                unrated=noOfStars-res[0]-1;
             }
             for(let i=0;i<this._elements.stars.length;i++){
-                var start=((box +(2*i)*box + (this.args.svg_width - box*this.args.noOfStars)+ this.args.star_strokewidth +this.args.padding) / 2) + " " + ((this.args.svg_height - box +this.args.star_strokewidth +this.args.padding) / 2);
+                var start=((box +(2*i)*box + (this._config.svg_width - box*noOfStars)+ star_strokewidth +padding) / 2) + " " + ((this._config.svg_height - box +star_strokewidth +padding) / 2);
                 if((flow=="" && res[0]>0) || (flow=="reverse" && unrated>0)){
                     if(flow==""){
-                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                        this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding);
                     }
                     else{
-                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                        this._unrated=true;
+                        this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding);
                     }
                 }
                 else if((flow=="" && res[0]==0) || (flow=="reverse" && unrated==0) && typeof res[1] !== "undefined"){
@@ -208,14 +223,15 @@ class Rating{
                             stroke:"url(#rated_stroke_RL)"
                         };
                     }
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding,rating_frac);               
+                    this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding,rating_frac);               
                 }
                 else if((flow=="" && res[0]<0) || (flow=="reverse" && unrated<0)){
                     if(flow==""){
-                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                        this._unrated=true;
+                        this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding);
                     }
                     else{
-                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                        this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding);
                     }
                 }
                 if(flow==""){
@@ -228,16 +244,17 @@ class Rating{
         }
         else{
             if(flow=="reverse"){
-                unrated=this.args.noOfStars-res[0]-1;
+                unrated=noOfStars-res[0]-1;
             }
             for(let i=0;i<this._elements.stars.length;i++){
-                var start=((box + (this.args.svg_width - box)+ this.args.star_strokewidth) / 2) + " " + (((2*i)*box +this.args.svg_height - box*this.args.noOfStars +this.args.star_strokewidth) / 2);
+                var start=((box + (this._config.svg_width - box)+ star_strokewidth) / 2) + " " + (((2*i)*box +this._config.svg_height - box*noOfStars +star_strokewidth) / 2);
                 if((flow=="" && res[0]>0) || (flow=="reverse" && unrated>0)){
                     if(flow==""){
-                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                        this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding);
                     }
                     else{
-                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                        this._unrated=true;
+                        this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding);
                     }
                 }
                 else if((flow=="" && res[0]==0) || (flow=="reverse" && unrated==0) && typeof res[1] !== "undefined"){
@@ -255,14 +272,15 @@ class Rating{
                             stroke:"url(#rated_stroke_BT)"
                         };
                     }
-                    createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding,rating_frac);
+                    this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding,rating_frac);
                 }
                 else if((flow=="" && res[0]<0) || (flow=="reverse" && unrated<0)){
                     if(flow==""){
-                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_unrated,this.args.stroke_unrated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                        this._unrated=true;
+                        this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding);
                     }
                     else{
-                        createStar(this._elements.stars[i],this._elements.svg,box,this.args.star_strokewidth,this.args.fill_rated,this.args.stroke_rated,this.args.svg_width,this.args.svg_height,start,this.args.padding);
+                        this._createStar(this._elements.stars[i],box,star_strokewidth,start,padding);
                     }
                 }
                 if(flow==""){
@@ -273,6 +291,7 @@ class Rating{
                 }
             }
         }
+        this._setUserAttributes();
 
         if(typeof this.onDraw === 'function'){
             this.onDraw();
@@ -280,16 +299,68 @@ class Rating{
         else if(typeof this.onDraw !== 'undefined' && typeof this.onDraw !== 'function'){
             console.error("onDraw not a function");
         }
-        this._setUserAttributes();
     }
+    _createStar(pathObj,box,star_strokewidth,start,padding,rating_frac=null){
+        var newElement=pathObj.elem;
+        var str=
+        "m "+start
+        +" l "+ (box*1/8) +" "+ (box*3/8) 
+        +" h "+ ((box*3/8)-star_strokewidth -padding) 
+        +" l -"+ (box/4)+" "+ ((box/4)-star_strokewidth-padding) 
+        +" l "+ (box/4) +" "+ ((box*3/8)) 
+        +" l -"+ ((box/2)-star_strokewidth-padding) +" -"+ (box/4) 
+        +" l -"+((box/2)) +" "+((box/4))
+        +" l "+((box/4)+star_strokewidth+padding)+" -"+((box*3/8))
+        +" l -"+((box/4)+star_strokewidth+padding)+" -"+((box/4)-star_strokewidth-padding)
+        +" h "+((box*3/8))
+        +" z";
 
-
+        if(pathObj.d!==str){
+            pathObj.d=this._setAttribute(newElement,"d",str,pathObj.d);
+        }
+        var fill_rated=this.args.fill_rated?this.args.fill_rated:this._config.fill_rated;
+        var fill_unrated=this.args.fill_unrated?this.args.fill_unrated:this._config.fill_unrated;
+        var stroke_rated=this.args.stroke_rated?this.args.stroke_rated:this._config.stroke_rated;
+        var stroke_unrated=this.args.stroke_unrated?this.args.stroke_unrated:this._config.stroke_unrated;
+        
+        if(rating_frac){
+            if(pathObj.fill!==rating_frac.fill){
+                pathObj.fill=this._setAttribute(newElement,"fill",rating_frac.fill,pathObj.fill);
+            }
+            if(pathObj.stroke!==rating_frac.stroke){
+                pathObj.stroke=this._setAttribute(newElement,"stroke",rating_frac.stroke,pathObj.stroke);
+            }
+        }
+        else{
+            if(this._unrated){
+                if(pathObj.fill!==fill_unrated){
+                    pathObj.fill=this._setAttribute(newElement,"fill",fill_unrated,pathObj.fill);
+                }
+                if(pathObj.stroke!==stroke_unrated){
+                    pathObj.stroke=this._setAttribute(newElement,"stroke",stroke_unrated,pathObj.stroke);
+                }
+                this._unrated=false;
+            }
+            else{
+                if(pathObj.fill!==fill_rated){
+                    pathObj.fill=this._setAttribute(newElement,"fill",fill_rated,pathObj.fill);
+                }
+                if(pathObj.stroke!==stroke_rated){
+                    pathObj.stroke=this._setAttribute(newElement,"stroke",stroke_rated,pathObj.stroke);
+                }
+            }
+        }
+        if(pathObj.strokeWidth!==star_strokewidth){
+            pathObj.strokeWidth=this._setAttribute(newElement,"stroke-width",star_strokewidth,pathObj.strokeWidth);
+        }
+        if(pathObj.strokeLinejoin!=="round"){
+            pathObj.strokeLinejoin=this._setAttribute(newElement,"stroke-linejoin","round",pathObj.strokeLinejoin);
+        }
+    }
     _putLinerGradient(frac,direction,flow){
-        //debugger;
         
         if(frac.length==1){
             frac=frac+"0";
-           // console.log(frac);
         }
         else if(frac.length>2){
             frac="."+frac;
@@ -297,7 +368,6 @@ class Rating{
             frac = frac.toFixed(2);
             let res2= frac.split(".");
             frac=res2[1];
-            // console.log(frac);
         }
         if(direction==="row"){
             var dir= [100,0];
@@ -308,17 +378,32 @@ class Rating{
         if(flow==="reverse"){
             frac=100-frac;
         }
+        var fill_rated=this.args.fill_rated?this.args.fill_rated:this._config.fill_rated;
+        var fill_unrated=this.args.fill_unrated?this.args.fill_unrated:this._config.fill_unrated;
+        var stroke_rated=this.args.stroke_rated?this.args.stroke_rated:this._config.stroke_rated;
+        var stroke_unrated=this.args.stroke_unrated?this.args.stroke_unrated:this._config.stroke_unrated;
         
-        setLinearGrad(this._elements.def.linearGrad_LR,this._elements.def.stop_rated_LR,this._elements.def.stop_unrated_LR,"rated",frac,this.args.fill_rated,this.args.fill_unrated,dir);
-        setLinearGrad(this._elements.def.linearGradStroke_LR,this._elements.def.stop_ratedStroke_LR,this._elements.def.stop_unratedStroke_LR,"rated_stroke",frac,this.args.stroke_rated,this.args.stroke_unrated,dir);
-        setLinearGrad(this._elements.def.linearGrad_RL,this._elements.def.stop_rated_RL,this._elements.def.stop_unrated_RL,"rated_RL",frac,this.args.fill_unrated,this.args.fill_rated,dir);
-        setLinearGrad(this._elements.def.linearGradStroke_RL,this._elements.def.stop_ratedStroke_RL,this._elements.def.stop_unratedStroke_RL,"rated_stroke_RL",frac,this.args.stroke_unrated,this.args.stroke_rated,dir);
-        setLinearGrad(this._elements.def.linearGrad_TB,this._elements.def.stop_rated_TB,this._elements.def.stop_unrated_TB,"rated_TB",frac,this.args.fill_rated,this.args.fill_unrated,dir);
-        setLinearGrad(this._elements.def.linearGradStroke_TB,this._elements.def.stop_ratedStroke_TB,this._elements.def.stop_unratedStroke_TB,"rated_stroke_TB",frac,this.args.stroke_rated,this.args.stroke_unrated,dir);
-        setLinearGrad(this._elements.def.linearGrad_BT,this._elements.def.stop_rated_BT,this._elements.def.stop_unrated_BT,"rated_BT",frac,this.args.fill_unrated,this.args.fill_rated,dir);
-        setLinearGrad(this._elements.def.linearGradStroke_BT,this._elements.def.stop_ratedStroke_BT,this._elements.def.stop_unratedStroke_BT,"rated_stroke_BT",frac,this.args.stroke_unrated,this.args.stroke_rated,dir);
+        this._setLinearGrad(this._elements.def.linearGrad_LR,this._elements.def.stop_rated_LR,this._elements.def.stop_unrated_LR,"rated",frac,fill_rated,fill_unrated,dir);
+        this._setLinearGrad(this._elements.def.linearGradStroke_LR,this._elements.def.stop_ratedStroke_LR,this._elements.def.stop_unratedStroke_LR,"rated_stroke",frac,stroke_rated,stroke_unrated,dir);
+        this._setLinearGrad(this._elements.def.linearGrad_RL,this._elements.def.stop_rated_RL,this._elements.def.stop_unrated_RL,"rated_RL",frac,fill_unrated,fill_rated,dir);
+        this._setLinearGrad(this._elements.def.linearGradStroke_RL,this._elements.def.stop_ratedStroke_RL,this._elements.def.stop_unratedStroke_RL,"rated_stroke_RL",frac,stroke_unrated,stroke_rated,dir);
+        this._setLinearGrad(this._elements.def.linearGrad_TB,this._elements.def.stop_rated_TB,this._elements.def.stop_unrated_TB,"rated_TB",frac,fill_rated,fill_unrated,dir);
+        this._setLinearGrad(this._elements.def.linearGradStroke_TB,this._elements.def.stop_ratedStroke_TB,this._elements.def.stop_unratedStroke_TB,"rated_stroke_TB",frac,stroke_rated,stroke_unrated,dir);
+        this._setLinearGrad(this._elements.def.linearGrad_BT,this._elements.def.stop_rated_BT,this._elements.def.stop_unrated_BT,"rated_BT",frac,fill_unrated,fill_rated,dir);
+        this._setLinearGrad(this._elements.def.linearGradStroke_BT,this._elements.def.stop_ratedStroke_BT,this._elements.def.stop_unratedStroke_BT,"rated_stroke_BT",frac,stroke_unrated,stroke_rated,dir);
     }
+    _setLinearGrad(linearEl,stop_rated,stop_unrated,id,offset,rated,unrated,direction) {
+        linearEl.setAttribute("id",id);
+        linearEl.setAttribute("x1","0");
+        linearEl.setAttribute("y1","0");
+        linearEl.setAttribute("x2",direction[0]+"%");
+        linearEl.setAttribute("y2",direction[1]+"%");
     
+        stop_rated.setAttribute("offset",offset+"%");
+        stop_rated.setAttribute("style","stop-color:"+rated+";stop-opacity:1");
+        stop_unrated.setAttribute("offset","0");
+        stop_unrated.setAttribute("style","stop-color:"+unrated+";stop-opacity:1");
+    }
     _validate(){
         var setUserAttributes=true;
         var direction,flow,box;
@@ -328,9 +413,9 @@ class Rating{
                 console.warn("Invalid Orientation, setting it to prev config");
             }
         }
-        else{
-            this.args.orientation=this._config.orientation;
-        }
+        // else{
+        //     this.args.orientation=this._config.orientation;
+        // }
         // !this.args.svg_height || 
         // !this.args.svg_width ||
         // !this.args.noOfStars ||
@@ -341,9 +426,9 @@ class Rating{
                 console.warn("invalid svg height, setting it to prev config");
             }
         }
-        else{
-            this.args.svg_height=this._config.svg_height;
-        }
+        // else{
+        //     this.args.svg_height=this._config.svg_height;
+        // }
 
         if(typeof this.args.svg_width !== "undefined"){
             this.args.svg_width=+this.args.svg_width;
@@ -352,9 +437,9 @@ class Rating{
                 console.warn("invalid svg width, setting it to prev config");
             }
         }
-        else{
-            this.args.svg_width=this._config.svg_width;
-        }
+        // else{
+        //     this.args.svg_width=this._config.svg_width;
+        // }
 
         if(typeof this.args.noOfStars!== "undefined"){
             this.args.noOfStars=+this.args.noOfStars; 
@@ -363,9 +448,9 @@ class Rating{
                 console.warn("invalid No Of Stars, setting it to prev config");
             }
         }
-        else{
-            this.args.noOfStars=this._config.noOfStars;
-        }
+        // else{
+        //     this.args.noOfStars=this._config.noOfStars;
+        // }
 
         if(typeof this.args.stroke_rated!== "undefined"){
             this.args.stroke_rated=""+(this.args.stroke_rated);
@@ -374,9 +459,9 @@ class Rating{
                 console.warn("invalid stroke rated, setting it to prev config");
             }
         }
-        else{
-            this.args.stroke_rated=this._config.stroke_rated;
-        }
+        // else{
+        //     this.args.stroke_rated=this._config.stroke_rated;
+        // }
 
         if(typeof this.args.stroke_unrated!== "undefined"){
             this.args.stroke_unrated=""+(this.args.stroke_unrated);
@@ -385,9 +470,9 @@ class Rating{
                 console.warn("invalid stroke unrated, setting it to prev config");
             }
         }
-        else{
-            this.args.stroke_unrated=this._config.stroke_unrated;
-        }
+        // else{
+        //     this.args.stroke_unrated=this._config.stroke_unrated;
+        // }
 
         if(typeof this.args.fill_rated!== "undefined"){
             this.args.fill_rated=""+(this.args.fill_rated);
@@ -396,9 +481,9 @@ class Rating{
                 console.warn("invalid fill rated, setting it to prev config");
             }
         }
-        else{
-            this.args.fill_rated=this._config.fill_rated;
-        }
+        // else{
+        //     this.args.fill_rated=this._config.fill_rated;
+        // }
 
         if(typeof this.args.fill_unrated!== "undefined"){
             this.args.fill_unrated=""+(this.args.fill_unrated);
@@ -407,9 +492,9 @@ class Rating{
                 console.warn("invalid fill unrated, setting it to prev config");
             }
         }
-        else{
-            this.args.fill_unrated=this._config.fill_unrated;
-        }
+        // else{
+        //     this.args.fill_unrated=this._config.fill_unrated;
+        // }
 
         if(typeof this.args.justify_content!== "undefined"){
             if(!(this.args.justify_content==="center" || this.args.justify_content==="start" || this.args.justify_content==="end" || this.args.justify_content==="space-evenly")){
@@ -417,9 +502,9 @@ class Rating{
                 console.warn("Invalid justify_content, setting it to prev config");
             }
         }
-        else{
-            this.args.justify_content=this._config.justify_content;
-        }
+        // else{
+        //     this.args.justify_content=this._config.justify_content;
+        // }
 
         if(typeof this.args.align_items!== "undefined"){
             if(!(this.args.align_items==="center" || this.args.align_items==="start" || this.args.align_items==="end")){
@@ -427,9 +512,9 @@ class Rating{
                 console.warn("Invalid align_items, setting it to prev config");
             }
         }
-        else{
-            this.args.align_items=this._config.align_items;
-        }
+        // else{
+        //     this.args.align_items=this._config.align_items;
+        // }
 
         if(typeof this.args.padding!== "undefined"){
             this.args.padding=+this.args.padding; //box checking is req
@@ -438,9 +523,9 @@ class Rating{
                 console.warn("invalid padding, setting it to prev config");
             }
         }
-        else{
-            this.args.padding=this._config.padding;
-        }
+        // else{
+        //     this.args.padding=this._config.padding;
+        // }
 
         if(typeof this.args.star_strokewidth!== "undefined"){
             this.args.star_strokewidth=+this.args.star_strokewidth;//box checking is req
@@ -449,15 +534,21 @@ class Rating{
                 console.warn("invalid strokewidth, setting it to prev config");
             }
         }
-        else{
-            this.args.star_strokewidth=this._config.star_strokewidth;
-        }
+        // else{
+        //     this.args.star_strokewidth=this._config.star_strokewidth;
+        // }
 
+        var noOfStars=this.args.noOfStars?this.args.noOfStars:this._config.noOfStars;
+        var svg_width= this.args.svg_width?this.args.svg_width:this._config.svg_width;
+        var svg_height= this.args.svg_height?this.args.svg_height:this._config.svg_height;
+        var orientation= this.args.orientation?this.args.orientation:this._config.orientation;
+        
+        //calculaing rating value        
         if(typeof this.args.rating_value!== "undefined"){ 
             this.args.rating_value=+this.args.rating_value; 
             if((!this.args.rating_value && this.args.rating_value!==0) || this.args.rating_value<0){
-                if(this._config.rating_value>this.args.noOfStars){
-                    this.args.rating_value=this.args.noOfStars;
+                if(this._config.rating_value>noOfStars){
+                    this.args.rating_value=noOfStars;
                     console.warn("invalid rating value, setting it to no of stars, prev config greater than no of stars");
                 }
                 else{
@@ -465,42 +556,37 @@ class Rating{
                     console.warn("invalid rating value, setting it to prev config");
                 }    
             }
-            else if(this.args.rating_value>this.args.noOfStars){
-                this.args.rating_value=this.args.noOfStars;
+            else if(this.args.rating_value>noOfStars){
+                this.args.rating_value=noOfStars;
                 //console.warn("rating value greater than no of stars, setting it to no of stars");
             }
         }
-        else{
-            this.args.rating_value=this._config.rating_value;
-        }
+        // else{
+        //     this.args.rating_value=this._config.rating_value;
+        // }
 
         //calculaing box size        
-
-
-
-        if(this.args.orientation==="LR" || this.args.orientation==="RL"){
+        if(orientation==="LR" || orientation==="RL"){
             direction="row";
         }
         else{
             direction="col";
         }
-
-        if(this.args.orientation==="RL" || this.args.orientation==="BT"){
+        if(orientation==="RL" || orientation==="BT"){
             flow="reverse";
         }
         else{
             flow="";
         }
-
+        
         if(direction==="row"){
-            let width=this.args.svg_width/this.args.noOfStars;
-            box=Math.min(width,this.args.svg_height);
+            let width=svg_width/noOfStars;
+            box=Math.min(width,svg_height);
         }
         else{
-            let height=this.args.svg_height/this.args.noOfStars;
-            box=Math.min(height,this.args.svg_width);
+            let height=svg_height/noOfStars;
+            box=Math.min(height,svg_width);
         }
-
         if(box<10){
             setUserAttributes=false;
             box=0;
@@ -532,68 +618,25 @@ class Rating{
     }
 
     _setUserAttributes(){
-        this._config.svg_height=this.args.svg_height;
-        this._config.svg_width=this.args.svg_width;
-        this._config.fill_rated=this.args.fill_rated;
-        this._config.fill_unrated=this.args.fill_unrated;
-        this._config.star_strokewidth=this.args.star_strokewidth;
-        this._config.noOfStars=this.args.noOfStars;
-        this._config.stroke_rated=this.args.stroke_rated;
-        this._config.stroke_unrated=this.args.stroke_unrated;
-        this._config.orientation=this.args.orientation;
-        this._config.rating_value=this.args.rating_value;
-        this._config.padding=this.args.padding;
-        this._config.justify_content=this.args.justify_content;
-        this._config.align_items=this.args.align_items;
-    }
-    
+        this._config.svg_height=this.args.svg_height?this.args.svg_height:this._config.svg_height;
+        this._config.svg_width=this.args.svg_width?this.args.svg_width:this._config.svg_width;
+        this._config.fill_rated=this.args.fill_rated?this.args.fill_rated:this._config.fill_rated;
+        this._config.fill_unrated=this.args.fill_unrated?this.args.fill_unrated:this._config.fill_unrated;
+        this._config.star_strokewidth=this.args.star_strokewidth?this.args.star_strokewidth:this._config.star_strokewidth;
+        this._config.noOfStars=this.args.noOfStars?this.args.noOfStars:this._config.noOfStars;
+        this._config.stroke_rated=this.args.stroke_rated?this.args.stroke_rated:this._config.stroke_rated;
+        this._config.stroke_unrated=this.args.stroke_unrated?this.args.stroke_unrated:this._config.stroke_unrated;
+        this._config.orientation=this.args.orientation?this.args.orientation:this._config.orientation;
+        this._config.rating_value=this.args.rating_value?this.args.rating_value:this._config.rating_value;
+        this._config.padding=this.args.padding?this.args.padding:this._config.padding;
+        this._config.justify_content=this.args.justify_content?this.args.justify_content:this._config.justify_content;
+        this._config.align_items=this.args.align_items?this.args.align_items:this._config.align_items;
+    }   
 }
-
-function setLinearGrad(linearEl,stop_rated,stop_unrated,id,offset,rated,unrated,direction) {
-    linearEl.setAttribute("id",id);
-    linearEl.setAttribute("x1","0");
-    linearEl.setAttribute("y1","0");
-    linearEl.setAttribute("x2",direction[0]+"%");
-    linearEl.setAttribute("y2",direction[1]+"%");
-
-    stop_rated.setAttribute("offset",offset+"%");
-    stop_rated.setAttribute("style","stop-color:"+rated+";stop-opacity:1");
-    stop_unrated.setAttribute("offset","0");
-    stop_unrated.setAttribute("style","stop-color:"+unrated+";stop-opacity:1");
-}
-
-function createStar(newElement,svg,box,star_strokewidth,fill_rated,stroke_rated,svg_width,svg_height,start,padding=0,rating_frac){
-    newElement.setAttribute("d",
-    "m "+start
-    +" l "+ (box*1/8) +" "+ (box*3/8) 
-    +" h "+ ((box*3/8)-star_strokewidth -padding) 
-    +" l -"+ (box/4)+" "+ ((box/4)-star_strokewidth-padding) 
-    +" l "+ (box/4) +" "+ ((box*3/8)) 
-    +" l -"+ ((box/2)-star_strokewidth-padding) +" -"+ (box/4) 
-    +" l -"+((box/2)) +" "+((box/4))
-    +" l "+((box/4)+star_strokewidth+padding)+" -"+((box*3/8))
-    +" l -"+((box/4)+star_strokewidth+padding)+" -"+((box/4)-star_strokewidth-padding)
-    +" h "+((box*3/8))
-    +" z");
-
-    if(rating_frac){
-        newElement.setAttribute("fill",rating_frac.fill);
-        newElement.setAttribute("stroke",rating_frac.stroke);
-    }
-    else{
-        //debugger;
-        newElement.setAttribute("fill",fill_rated);
-        newElement.setAttribute("stroke",stroke_rated);
-    }
-    newElement.style.strokeWidth = star_strokewidth;
-    newElement.style.strokeLinejoin="round";
-    // svg.appendChild(newElement);
-    }
 //function to check if input is float or not
 function isFloat(n){
     return Number(n) === n && n % 1 !== 0;
 }
-
 //function to check if input is hex value or not
 function checkHex(value){
 	return /^#([A-Fa-f0-9]{3}$)|([A-Fa-f0-9]{6}$)/.test(value)

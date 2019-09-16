@@ -8,31 +8,48 @@
 
     <script>
         var config={
-            rating_value:3.7,
-            orientation:"TB"
+            // rating_value:2.7,
+            // orientation:"TB"
+            // svg_width:500,
+            // svg_height:500
         };
+        // config.fill_rated="red";
+        // config.stroke_rated="blue";
+        // config.fill_unrated="green";
         let a = new Rating(svg_div, config);
 
-        var bound= a.update.bind(a);
-        setTimeout(()=>{
-            config.orientation="BT";
-            bound();
-        },2000);
+        // var bound= a.update.bind(a);
+        // setTimeout(()=>{
+        //     // config.svg_width=600;
+        //     // config.svg_height=700;
 
+        //     config.orientation="RL";
+        //     bound();
+        // },2000);
+        // setTimeout(()=>{
+        //     // config.svg_width=800;
+        //     config.orientation="LR";
+        //     bound();
+        // },4000);
+        // setTimeout(()=>{
+        //     // config.svg_width=800;
+        //     config.orientation="BT";
+        //     bound();
+        // },6000);
         //story: parentNode in HTML
 
-        // let T = 1, startTime = ((new Date()).getTime() * 1), time = 0,colors = ['#ff0', '#f00', '#0f0', '#000'];
-        // while(time < 100){
-        //     config.svg_width=400+ ((T * 100) % 400);
-        //     config.svg_height=400+ ((T * 100) % 400);
-        //     config.rating_value=(((4.5 + T) % 10) + 1) % (((5 + T) % 10) + 1);
-        //     config.noOfStars=(5 + T) % 10 + 1;
-        //     config.fill_rated=colors[T%4];
-        //     a.update();
-        //     time =  ((new Date()).getTime() * 1) - startTime;
-        //     T++;
-        // }
-        // console.log(T + ' tests in ' + time + 'ms');
+        let T = 1, startTime = ((new Date()).getTime() * 1), time = 0,colors = ['#ff0', '#f00', '#0f0', '#000'];
+        while(time < 100){
+            config.svg_width=400+ ((T * 100) % 400);
+            config.svg_height=400+ ((T * 100) % 400);
+            config.rating_value=(((4.5 + T) % 10) + 1) % (((5 + T) % 10) + 1);
+            config.noOfStars=(5 + T) % 10 + 1;
+            config.fill_rated=colors[T%4];
+            a.update();
+            time =  ((new Date()).getTime() * 1) - startTime;
+            T++;
+        }
+        console.log(T + ' tests in ' + time + 'ms');
 
         //story: HTML element
 
